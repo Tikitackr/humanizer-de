@@ -4,7 +4,7 @@
 
 5-Durchgang-Analyse: Erkennt 24 KI-Schreibmuster, flaggt 125+ deutsche KI-Vokabeln in 3 Tiers + 48 Phrasen + 16 Chatbot-Artefakte, misst 5 statistische Signale (Burstiness, TTR, Flesch-DE) und schreibt Texte mit Personality Injection um. Inklusive Lesch-Stil-Layer.
 
-> **Version:** 1.1.0
+> **Version:** 1.2.0
 > **Autor:** OpenClaw
 > **Sprache:** Deutsch
 > **Lizenz:** MIT

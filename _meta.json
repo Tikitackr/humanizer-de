@@ -1,6 +1,6 @@
 {
   "name": "humanizer-de",
-  "version": "1.1.2",
+  "version": "1.2.0",
   "author": "OpenClaw",
   "description": "Erster deutscher KI-Text-Detektor fuer OpenClaw. Agent-Modus: 5-Durchgangs-Analyse mit 24 KI-Mustern, 125+ Vokabeln in 3 Tiers, 48 Phrasen, Personality Injection, Lesch-Stil-Layer. CLI-Modus: Standalone Vokabel-/Phrasen-/Statistik-Check ohne KI (90 Woerter, 48 Phrasen, 5 Signale, Auto-Fix mit Backup).",
   "language": "de",
