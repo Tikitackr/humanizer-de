@@ -569,6 +569,49 @@ function calcPersonalityBonus(text) {
 }
 
 // ============================================================
+//  GEDANKENSTRICH-ERKENNUNG (Muster #13)
+// ============================================================
+
+/**
+ * Zählt En-Dashes (–) im Fließtext.
+ * Ignoriert:
+ *   - QR-Code-Platzhalter: [QR-CODE: ID – Beschreibung]
+ *   - Code-Blöcke (``` ... ```)
+ *   - Inline-Code (`...`)
+ * Regel aus ki-muster.md: >3 pro ~250 Wörter = HOCH (+5 Punkte pro Überschreitung)
+ */
+function countGedankenstriche(text) {
+  // Code-Blöcke entfernen
+  let cleaned = text.replace(/```[\s\S]*?```/g, '');
+  // Inline-Code entfernen
+  cleaned = cleaned.replace(/`[^`]+`/g, '');
+  // QR-Code-Platzhalter entfernen
+  cleaned = cleaned.replace(/\[QR-CODE:[^\]]*\]/g, '');
+
+  // Alle En-Dashes im bereinigten Text finden
+  const matches = cleaned.match(/–/g);
+  const total = matches ? matches.length : 0;
+
+  // Wörter zählen für Dichte-Berechnung
+  const words = tokenize(cleaned).length;
+  const pages = Math.max(1, Math.round(words / 250));
+  const perPage = words > 0 ? total / pages : 0;
+
+  // Schwelle: >3 pro 250 Wörter
+  const threshold = pages * 3;
+  const excess = Math.max(0, total - threshold);
+
+  return {
+    total,
+    words,
+    pages,
+    perPage: perPage.toFixed(1),
+    threshold,
+    excess,
+  };
+}
+
+// ============================================================
 //  SCORE-BERECHNUNG
 // ============================================================
 
@@ -579,6 +622,7 @@ function calculateScore(text) {
     tier2: [],
     phrasen: [],
     chatbot: [],
+    gedankenstriche: {},
     statistik: {},
     coOccurrence: [],
     personality: {},
@@ -608,6 +652,15 @@ function calculateScore(text) {
   report.chatbot = ca;
   score += ca.length * 5;
   if (ca.length > 0) report.details.push(`Chatbot-Artefakte: ${ca.length}x (+${ca.length * 5})`);
+
+  // Gedankenstriche (Muster #13)
+  const gs = countGedankenstriche(text);
+  report.gedankenstriche = gs;
+  if (gs.excess > 0) {
+    const gsScore = Math.min(gs.excess * 5, 25); // Max +25 Punkte (Cap)
+    score += gsScore;
+    report.details.push(`Gedankenstriche: ${gs.total}x in ~${gs.pages} Seite(n), ${gs.perPage}/Seite (Limit 3/Seite → ${gs.excess} über Limit → +${gsScore})`);
+  }
 
   // Statistik
   const sentences = splitSentences(text);
@@ -752,9 +805,25 @@ function formatAnalyze(report, text) {
     lines.push('');
   }
 
+  // Gedankenstriche (Muster #13)
+  const gs = report.gedankenstriche;
+  if (gs && gs.total > 0) {
+    lines.push('───────────────────────────────────────────');
+    const gsScore = gs.excess > 0 ? Math.min(gs.excess * 5, 25) : 0;
+    lines.push(`  4. GEDANKENSTRICHE (${gs.total} gefunden, ${gs.perPage}/Seite, +${gsScore} Pkt)`);
+    lines.push('───────────────────────────────────────────');
+    if (gs.excess > 0) {
+      lines.push(`  ✗ ${gs.total} En-Dashes (–) in ~${gs.pages} Seite(n) → ${gs.excess} über Limit (3/Seite)`);
+      lines.push('  KI streut Gedankenstriche wie Konfetti. Ersetze durch Punkt, Komma oder Umformulierung.');
+    } else {
+      lines.push(`  ✓ ${gs.total} En-Dashes (–) in ~${gs.pages} Seite(n) → im Rahmen`);
+    }
+    lines.push('');
+  }
+
   // Statistik
   lines.push('───────────────────────────────────────────');
-  lines.push('  4. STATISTIK');
+  lines.push('  5. STATISTIK');
   lines.push('───────────────────────────────────────────');
 
   const b = report.statistik.burstiness;
@@ -797,7 +866,7 @@ function formatAnalyze(report, text) {
   // Co-Occurrence
   if (report.coOccurrence && report.coOccurrence.length > 0) {
     lines.push('───────────────────────────────────────────');
-    lines.push(`  4b. CO-OCCURRENCE-ALARM (${report.coOccurrence.length} Cluster, +${report.coOccurrence.length * 5} Pkt)`);
+    lines.push(`  5b. CO-OCCURRENCE-ALARM (${report.coOccurrence.length} Cluster, +${report.coOccurrence.length * 5} Pkt)`);
     lines.push('───────────────────────────────────────────');
     for (const alarm of report.coOccurrence) {
       lines.push(`  ▸ Absatz ${alarm.paragraph}, Set ${alarm.set}: ${alarm.matches.join(', ')} (${alarm.count} Treffer)`);
